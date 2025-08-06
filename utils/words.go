@@ -1,5 +1,6 @@
 package Words
 
+// FIXME: Add More words to the list
 func GetWords() []string {
 	return []string{
 		"hello",
@@ -10,3 +11,5 @@ func GetWords() []string {
 		"example",
 	}
 }
+
+//TODO: Add functionality to read random words from the list

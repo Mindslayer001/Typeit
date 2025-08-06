@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	Words "github.com/mindslayer001/typeit/utils"
 	"golang.org/x/term"
@@ -12,26 +10,22 @@ import (
 
 var oldState *term.State
 
-func main() {
-	// Handle Ctrl+C cleanup
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGINT)
-	go func() {
-		<-sigChan
-		fmt.Println("\nCaught Ctrl+C! Cleaning up...")
+func restoreTerminal() {
+	if oldState != nil {
 		term.Restore(int(os.Stdin.Fd()), oldState)
-		os.Exit(0)
-	}()
+	}
+}
 
-	fmt.Print("TYPE IT\n")
+func main() {
 	var err error
 	oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("error:", err)
 		return
 	}
-	defer term.Restore(int(os.Stdin.Fd()), oldState)
+	defer restoreTerminal() // Automatic Code end
 
+	fmt.Println("TYPE IT")
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -42,39 +36,40 @@ func main() {
 	wordList := Words.GetWords()
 
 	for _, word := range wordList {
-		fmt.Println("\nType this word:", word)
+		fmt.Printf("\r\nType this word: %s\n", word)
+		fmt.Print("> ")
 
-		capturedWord := make([]byte, len(word))
 		capturedChar := make([]byte, 1)
 		i := 0
 
 		for i < len(word) {
 			_, err := os.Stdin.Read(capturedChar)
 			if err != nil {
-				fmt.Println("Error reading:", err)
+				fmt.Println("\nError reading:", err)
 				return
 			}
 
-			// Handle backspace (both 127 and 8)
-			if capturedChar[0] == 127 || capturedChar[0] == 8 {
+			ch := capturedChar[0]
+
+			switch ch {
+			case 3: // Ctrl+C
+				fmt.Println("\n Caught Ctrl+C")
+				restoreTerminal()
+				os.Exit(0)
+			case 127, 8: // Backspace
 				if i > 0 {
 					i--
-					fmt.Print("\b \b") // erase the last character visually
+					fmt.Print("\b \b")
 				}
 				continue
 			}
 
-			// Record character
-			capturedWord[i] = capturedChar[0]
-
-			// Compare
-			if capturedChar[0] == word[i] {
-				fmt.Printf("%c", capturedChar[0]) // print char if correct
+			if ch == word[i] {
+				fmt.Printf("%c", ch)
+				i++
 			} else {
-				fmt.Printf("\nWrong character at position %d: expected '%c', got '%c'\n", i, word[i], capturedChar[0])
+				fmt.Print("\a") // Beep
 			}
-
-			i++
 		}
 	}
 }
