@@ -11,12 +11,14 @@ import (
 
 var oldState *term.State
 
+// Restore Terminal just code ends
 func restoreTerminal() {
 	if oldState != nil {
 		term.Restore(int(os.Stdin.Fd()), oldState)
 	}
 }
 
+// Return the result coloured string
 func GetResult(capturedWord []byte, target string) string {
 	result := ""
 	i := 0
