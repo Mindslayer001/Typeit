@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	Words "github.com/mindslayer001/typeit/utils"
+	"github.com/mindslayer001/typeit/utils"
+	Words "github.com/mindslayer001/typeit/words"
 	"golang.org/x/term"
 )
 
@@ -14,6 +15,25 @@ func restoreTerminal() {
 	if oldState != nil {
 		term.Restore(int(os.Stdin.Fd()), oldState)
 	}
+}
+
+func GetResult(capturedWord []byte, target string) string {
+	result := ""
+	i := 0
+	for i < len(capturedWord) {
+		switch capturedWord[i] {
+		case target[i]:
+			result += utils.BasicColors.Green + string(target[i])
+		case '\x00':
+			result += utils.BasicColors.Reset + string(target[i:])
+			return result
+		default:
+			result += utils.BasicColors.Red + string(target[i])
+		}
+		i++
+	}
+	result += utils.BasicColors.Reset
+	return result
 }
 
 func main() {
@@ -34,12 +54,13 @@ func main() {
 	fmt.Printf("Terminal size: %dx%d\n", width, height)
 
 	wordList := Words.GetWords()
-
+	fmt.Print("\r\nGame Started:\n")
 	for _, word := range wordList {
-		fmt.Printf("\r\nType this word: %s\n", word)
-		fmt.Print("> ")
+		fmt.Print("\r\033[K")
+		fmt.Print(word)
 
 		capturedChar := make([]byte, 1)
+		capturedWord := make([]byte, len(word))
 		i := 0
 
 		for i < len(word) {
@@ -57,19 +78,18 @@ func main() {
 				restoreTerminal()
 				os.Exit(0)
 			case 127, 8: // Backspace
-				if i > 0 {
+				if i > 0 && len(capturedWord) > 0 {
+					capturedWord[i-1] = '\x00'
 					i--
-					fmt.Print("\b \b")
+				} else {
+					capturedWord[i] = '\x00'
 				}
-				continue
-			}
-
-			if ch == word[i] {
-				fmt.Printf("%c", ch)
+			default:
+				capturedWord[i] = capturedChar[0]
 				i++
-			} else {
-				fmt.Print("\a") // Beep
 			}
+			fmt.Print("\r" + GetResult(capturedWord, word))
 		}
 	}
+	//fmt.Print("\033[H\033[2J") // Clear screen
 }
