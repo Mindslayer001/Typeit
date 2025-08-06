@@ -31,9 +31,6 @@ build:
 run: build
 	@./$(build_dir)/$(binary_name)-$(GOOS)-$(GOARCH)
 
-clean:
-	@rm -rf $(build_dir)
-
 build-all:
 	@mkdir -p $(build_dir)
 	@for platform in $(PLATFORMS); do \
